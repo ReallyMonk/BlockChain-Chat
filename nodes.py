@@ -10,7 +10,7 @@ class Block:
         self.transactions = transactions            # Transactions stored in the block, for our program we have the context, author and posting time
         self.timestamp = time.time()                # Timestamp when this block is created
         self.preblock = preblock                    # To fullfill a blockchain, we need to know the previous block
-        self.random_digit = random.randint(0,100)   # To make sure the hash value fit our requirments
+        self.random_digit = random.randint(0,10000) # To make sure the hash value fit our requirments
     
     def compute_hash(self):
         '''
@@ -37,7 +37,7 @@ class BlockChain:
     def __init__(self):
         self.new_transactions = []
         self.chain = []
-        self.create_origin_block()
+        self.initial_chain()
 
     def create_origin_block(self):
         '''
@@ -53,6 +53,29 @@ class BlockChain:
     @property
     def last_block(self):
         return self.chain[-1]
+
+    def initial_chain(self):
+        '''
+        Go to check if we have a chain in database.
+        If we do, use that chain
+        If we don't, create a new 
+        '''
+        client = pymongo.MongoClient(host='localhost', port=27017)
+        db = client.test
+        collection = db.BlockChain
+
+        result = collection.find()
+
+        if not result:
+            self.create_origin_block()
+            return "Create an original block"
+
+        for block in result:
+            new_B = Block(block['BID'],block['transac'],block['preblock'])
+            new_B.timestamp = block['time']
+            new_B.random_digit = block['random_digit']
+            self.chain.append(new_B)       
+        return "Load an existe chain"
 
     @classmethod
     def check_block(cls, block):
@@ -190,3 +213,10 @@ def app_mine():
 
 # Run app
 app.run(debug=True, port=8000)
+'''
+client = pymongo.MongoClient(host='localhost', port=27017)
+db = client.test
+collection = db.BlockChain
+
+result = collection.find()
+'''
