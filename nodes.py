@@ -49,6 +49,7 @@ class BlockChain:
         origin_block = Block(0,origin_block_json,"none")
         self.chain.append(origin_block)
         self.DB_update(origin_block)
+        #print('create origin block')
     
     @property
     def last_block(self):
@@ -60,20 +61,24 @@ class BlockChain:
         If we do, use that chain
         If we don't, create a new 
         '''
+        print('initial_chain')
         client = pymongo.MongoClient(host='localhost', port=27017)
         db = client.test
         collection = db.BlockChain
 
-        result = collection.find()
-
+        result = collection.find_one({'BID':0})
+        print(not result)
         if not result:
             self.create_origin_block()
             return "Create an original block"
 
-        for block in result:
+        chain = collection.find()
+        for block in chain:
             new_B = Block(block['BID'],block['transac'],block['preblock'])
             new_B.timestamp = block['time']
+            #print(block['random_digit'])
             new_B.random_digit = block['random_digit']
+            #print(new_B.random_digit)
             self.chain.append(new_B)       
         return "Load an existe chain"
 
@@ -219,4 +224,10 @@ db = client.test
 collection = db.BlockChain
 
 result = collection.find()
+
+print(BCChat.chain[0].hash == BCChat.chain[1].preblock)
+
+for block in BCChat.chain:
+    print(block.__dict__)
+
 '''
