@@ -48,6 +48,7 @@ class BlockChain:
         origin_block_json.append(json.dumps({"author":"God", "content":"Hello World!"}))
         origin_block = Block(0,origin_block_json,"none")
         self.chain.append(origin_block)
+        self.DB_update(origin_block)
     
     @property
     def last_block(self):
@@ -82,6 +83,8 @@ class BlockChain:
             return False
         
         self.chain.append(block)
+        self.DB_update(block)
+
         return True
     
     def add_transaction(self, transaction):
@@ -108,7 +111,24 @@ class BlockChain:
             return self.last_block.BID
         else:
             return False
+    
+    def DB_update(self, new_block):
+        '''
+        To make sure we can keep the contents after the server is offline
+        '''
+        client = pymongo.MongoClient(host='localhost', port=27017)
+        db = client.test
+        collection = db.BlockChain
 
+        insert_block = {
+            'BID': new_block.BID,
+            'transac': new_block.transactions,
+            'time': new_block.timestamp,
+            'random_digit': new_block.random_digit,
+            'preblock': new_block.preblock
+        }
+
+        collection.insert(insert_block)
 
 '''
 Now we deploy the blockchain framework to a flask server
@@ -118,11 +138,6 @@ from flask import Flask, request, redirect
 app = Flask(__name__)
 
 BCChat = BlockChain()
-
-# Connect to mongoDB server
-client = pymongo.MongoClient(host='localhost', port=27017)
-db = client.test
-collection = db.BlockChain
 
 @app.route('/')
 def Hello():
@@ -175,19 +190,3 @@ def app_mine():
 
 # Run app
 app.run(debug=True, port=8000)
-
-'''
-new_transac = {'author':'ReallyMonkey', 'content':'Hello World!'}
-blk = Block(0, new_transac, 'whatever')
-
-mongoB = {
-    'BID':blk.BID,
-    'tranasctions':blk.transactions,
-    'timestamp':blk.timestamp
-}
-
-result = Block.hash(mongoB)
-print(result)
-'''
-
-
