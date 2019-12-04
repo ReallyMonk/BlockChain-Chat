@@ -79,7 +79,11 @@ class BlockChain:
             #print(block['random_digit'])
             new_B.random_digit = block['random_digit']
             #print(new_B.random_digit)
-            self.chain.append(new_B)       
+            if new_B.hash == block['hash']:
+                self.chain.append(new_B)
+            else:
+                return "Invalid chain"
+
         return "Load an existe chain"
 
     @classmethod
@@ -153,7 +157,8 @@ class BlockChain:
             'transac': new_block.transactions,
             'time': new_block.timestamp,
             'random_digit': new_block.random_digit,
-            'preblock': new_block.preblock
+            'preblock': new_block.preblock,
+            'hash': new_block.hash
         }
 
         collection.insert(insert_block)
