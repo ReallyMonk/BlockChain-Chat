@@ -7,8 +7,9 @@
 	<center>
 	<form action="/submit" id="textform" method="post">
 	    <textarea name="content" rows="4" cols="50" placeholder="Just write whatever you want to..."></textarea>
-	    <br>
-	    <input type="text" name="author" placeholder="Your name">
+		<br>
+		<p>{{author}}</p>
+		<input type="hidden" name="author" placeholder="Your name" value={{author}}>
 	    <input type="submit" value="Post">
 	</form>
 	</center>

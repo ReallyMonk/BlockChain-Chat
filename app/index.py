@@ -5,7 +5,7 @@ import pymongo
 import rsa, base64
 
 import requests
-from flask import render_template, redirect, request
+from flask import render_template, redirect, request, url_for
 
 from app import app
 
@@ -20,16 +20,35 @@ user = collec_User.find_one({'name':'ReallyMonkey'})
 pri_key = user['private']
 pub_key = user['public']
 
-@app.route('/login')
+@app.route('/')
+def HelloWorld():
+    return render_template('login.html')
+
+@app.route('/login', methods=['POST'])
 def long_in():
     username = request.form['username']
     password = request.form['password']
     user_info = collec_User.find_one({'name':username})
     if not user_info:
-        return False
+        public_key, private_key = generate_signature_keys()
+        new_user = {
+            'name': username,
+            'password': password,
+            'public': public_key,
+            'private': private_key,
+        }
+        collec_User.insert_one(new_user)
+        return redirect(url_for('index', name=username))
+    else:
+        pass_info = user_info['password']
+        if pass_info != password:
+            return redirect('/login')
+        else:
+            return redirect(url_for('index', name=username))
+    
 
-@app.route('/')
-def load_index():
+@app.route('/index/?<string:name>')
+def index(name):
     chain_addr = "{}/chain".format(NODES_ADDR)
     response = requests.get(chain_addr)
     if response.status_code == 200:
@@ -53,6 +72,7 @@ def load_index():
     return render_template('index.html',
                            title='BlockChain Chat',
                            posts=posts,
+                           author=name,
                            node_address=NODES_ADDR,
                            readable_time=timestamp_to_string)
 
@@ -97,3 +117,8 @@ def make_signature(transac):
     sig_str = str(base64.b64encode(signature), encoding='utf-8')
     return sig_str
 
+def generate_signature_keys():
+    (pub_key, pri_key) = rsa.newkeys(512)
+    publickey = pub_key.save_pkcs1().decode()
+    privatekey = pri_key.save_pkcs1().decode()
+    return publickey, privatekey

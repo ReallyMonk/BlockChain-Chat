@@ -9,21 +9,23 @@ db = client.test
 collec_User = db.User
 collec_BC = db.BlockChain
 
-#(pub_key, pri_key) = rsa.newkeys(512)
+(pub_key, pri_key) = rsa.newkeys(512)
 
 #print(pub_key.__class__)
 #print(pub_key)
 
-'''
+
 user = {
     'name': 'ReallyMonkey',
+    'passworld':'1111',
     'public': pub_key.save_pkcs1().decode(),
     'private': pri_key.save_pkcs1().decode(),
 }
-'''
-#collec.insert_one(user)
 
+collec_User.insert_one(user)
+'''
 new_usr = collec_User.find_one({'name':'ReallyMonkey'})
+print(new_usr)
 
 public_key = rsa.PublicKey.load_pkcs1(new_usr['public'].encode())
 private_key = rsa.PrivateKey.load_pkcs1(new_usr['private'].encode())
@@ -53,3 +55,4 @@ else:
 
 #with open('pub_key.pem','w+') as f:
  #   f.write(pub_key.save_pkcs1().decode())
+'''
