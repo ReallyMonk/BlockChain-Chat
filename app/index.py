@@ -12,14 +12,21 @@ from app import app
 # Connect database
 client = pymongo.MongoClient(host='localhost', port=27017)
 db = client.test 
-collec = db.User 
+collec_User = db.User 
 
 NODES_ADDR = "http://localhost:8000"
 posts = []
-user = collec.find_one({'name':'ReallyMonkey'})
+user = collec_User.find_one({'name':'ReallyMonkey'})
 pri_key = user['private']
 pub_key = user['public']
 
+@app.route('/login')
+def long_in():
+    username = request.form['username']
+    password = request.form['password']
+    user_info = collec_User.find_one({'name':username})
+    if not user_info:
+        return False
 
 @app.route('/')
 def load_index():
@@ -89,3 +96,4 @@ def make_signature(transac):
     # Here we need to translate signature from bytes to str to make it serializable
     sig_str = str(base64.b64encode(signature), encoding='utf-8')
     return sig_str
+

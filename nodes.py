@@ -202,6 +202,9 @@ def add_new_transaction():
             return result, 404
     
     # Also, we need to have an authentication of author's identity
+    if not check_sig(new_transaction):
+        return "signature not valid", 404
+    '''
     user_info = collec_User.find_one({'name':new_transaction['author']})
     pub_key = user_info['public'].encode()
     public_key = rsa.PublicKey.load_pkcs1(pub_key)
@@ -217,7 +220,7 @@ def add_new_transaction():
         rsa.verify(transac_json, signature, public_key)
     except rsa.pkcs1.VerificationError:
         return "Transaction Invalidation", 404
-
+    '''
     BCChat.add_transaction(new_transaction)
     #print(BCChat.new_transactions)
 
@@ -240,6 +243,25 @@ def app_mine():
     if not result:
         return "No transaction to mine"
     return "Block #{} has been mined.".format(result)
+
+def check_sig(new_transaction):
+    user_info = collec_User.find_one({'name':new_transaction['author']})
+    pub_key = user_info['public'].encode()
+    public_key = rsa.PublicKey.load_pkcs1(pub_key)
+    sig_bytes = bytes(new_transaction['signature'], encoding='utf-8')
+    signature = base64.b64decode(sig_bytes)
+    transac_body = {
+        'author': new_transaction['author'],
+        'content': new_transaction['content'],
+        'time': new_transaction['time']
+    }
+    transac_json = json.dumps(transac_body).encode()
+    try:
+        rsa.verify(transac_json, signature, public_key)
+    except rsa.pkcs1.VerificationError:
+        return False
+    else:
+        return True
 
 # Run app
 app.run(debug=True, port=8000)
