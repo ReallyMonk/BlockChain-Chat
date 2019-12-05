@@ -16,9 +16,9 @@ collec_User = db.User
 
 NODES_ADDR = "http://localhost:8000"
 posts = []
-user = collec_User.find_one({'name':'ReallyMonkey'})
-pri_key = user['private']
-pub_key = user['public']
+#user = collec_User.find_one({'name':'ReallyMonkey'})
+#pri_key = user['private']
+#pub_key = user['public']
 
 @app.route('/')
 def HelloWorld():
@@ -89,7 +89,7 @@ def submit_transaction():
     }
     
     post_json = json.dumps(post_object).encode()
-    signature = make_signature(post_json)
+    signature = make_signature(post_json, author)
     transac_pak = {
         'author': author,
         'content': content,
@@ -105,12 +105,14 @@ def submit_transaction():
                  json=transac_pak,
                  headers={'Content-type': 'application/json'})
 
-    return redirect('/')
+    return redirect(url_for('index', name = author))
 
 def timestamp_to_string(epoch_time):
     return datetime.datetime.fromtimestamp(epoch_time).strftime('%H:%M')
 
-def make_signature(transac):
+def make_signature(transac, author):
+    usr = collec_User.find_one({'name': author})
+    pri_key = usr['private']
     private_key = rsa.PrivateKey.load_pkcs1(pri_key.encode())
     signature = rsa.sign(transac, private_key, 'SHA-1')
     # Here we need to translate signature from bytes to str to make it serializable

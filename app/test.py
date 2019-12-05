@@ -22,7 +22,8 @@ user = {
     'private': pri_key.save_pkcs1().decode(),
 }
 
-collec_User.insert_one(user)
+#collec_User.insert_one(user)
+print(user['name'])
 '''
 new_usr = collec_User.find_one({'name':'ReallyMonkey'})
 print(new_usr)
