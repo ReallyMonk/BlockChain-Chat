@@ -3,6 +3,7 @@ import json
 import time
 import random
 import pymongo
+import rsa, base64
 
 class Block:
     def __init__(self,BID,transactions,preblock):
@@ -32,7 +33,6 @@ class Block:
             hash_value = self.compute_hash()
         return hash_value
 
-
 class BlockChain:
     def __init__(self):
         self.new_transactions = []
@@ -61,13 +61,13 @@ class BlockChain:
         If we do, use that chain
         If we don't, create a new 
         '''
-        print('initial_chain')
+        #print('initial_chain')
         client = pymongo.MongoClient(host='localhost', port=27017)
         db = client.test
         collection = db.BlockChain
 
         result = collection.find_one({'BID':0})
-        print(not result)
+        #print(not result)
         if not result:
             self.create_origin_block()
             return "Create an original block"
@@ -172,6 +172,11 @@ app = Flask(__name__)
 
 BCChat = BlockChain()
 
+# connect to the database
+client = pymongo.MongoClient(host='localhost', port=27017)
+db = client.test
+collec_User = db.User
+
 @app.route('/')
 def Hello():
     #print(test())
@@ -186,19 +191,34 @@ def add_new_transaction():
     Provide a interface to client to add new transaction to
     the block chain.
     '''
-    new_transactions = request.get_json()
+    new_transaction = request.get_json()
     #new_transactions = {'author':'ReallyMonkey','content':'testtesttest',}
-    new_posts = ["author", "content"]
+    new_posts = ["author", "content", "signature"]
 
     # To make sure we have the valid input content
     for post in new_posts:
-        if not new_transactions.get(post):
+        if not new_transaction.get(post):
             result = "Missing " + post
             return result, 404
     
-    new_transactions["time"] = time.time()
+    # Also, we need to have an authentication of author's identity
+    user_info = collec_User.find_one({'name':new_transaction['author']})
+    pub_key = user_info['public'].encode()
+    public_key = rsa.PublicKey.load_pkcs1(pub_key)
+    sig_bytes = bytes(new_transaction['signature'], encoding='utf-8')
+    signature = base64.b64decode(sig_bytes)
+    transac_body = {
+        'author': new_transaction['author'],
+        'content': new_transaction['content'],
+        'time': new_transaction['time']
+    }
+    transac_json = json.dumps(transac_body).encode()
+    try:
+        rsa.verify(transac_json, signature, public_key)
+    except rsa.pkcs1.VerificationError:
+        return "Transaction Invalidation", 404
 
-    BCChat.add_transaction(new_transactions)
+    BCChat.add_transaction(new_transaction)
     #print(BCChat.new_transactions)
 
     return "Success", 201
@@ -223,6 +243,7 @@ def app_mine():
 
 # Run app
 app.run(debug=True, port=8000)
+
 '''
 client = pymongo.MongoClient(host='localhost', port=27017)
 db = client.test

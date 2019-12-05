@@ -1,13 +1,25 @@
 import datetime
 import json
+import time
+import pymongo
+import rsa, base64
 
 import requests
 from flask import render_template, redirect, request
 
 from app import app
 
+# Connect database
+client = pymongo.MongoClient(host='localhost', port=27017)
+db = client.test 
+collec = db.User 
+
 NODES_ADDR = "http://localhost:8000"
 posts = []
+user = collec.find_one({'name':'ReallyMonkey'})
+pri_key = user['private']
+pub_key = user['public']
+
 
 @app.route('/')
 def load_index():
@@ -46,13 +58,24 @@ def submit_transaction():
     post_object = {
         'author': author,
         'content': content,
-        #'rep_flap': rep_flag,
+        'time': time.time(),
     }
-
+    
+    post_json = json.dumps(post_object).encode()
+    signature = make_signature(post_json)
+    transac_pak = {
+        'author': author,
+        'content': content,
+        'time': post_object['time'],
+        'signature': signature,
+    }
+    #print(post_object.__class__)
+    #print(transac_pak.__class__)
+    
     transac_addr = "{}/add_new_transaction".format(NODES_ADDR)
-
+    
     requests.post(transac_addr,
-                 json=post_object,
+                 json=transac_pak,
                  headers={'Content-type': 'application/json'})
 
     return redirect('/')
@@ -60,3 +83,9 @@ def submit_transaction():
 def timestamp_to_string(epoch_time):
     return datetime.datetime.fromtimestamp(epoch_time).strftime('%H:%M')
 
+def make_signature(transac):
+    private_key = rsa.PrivateKey.load_pkcs1(pri_key.encode())
+    signature = rsa.sign(transac, private_key, 'SHA-1')
+    # Here we need to translate signature from bytes to str to make it serializable
+    sig_str = str(base64.b64encode(signature), encoding='utf-8')
+    return sig_str
