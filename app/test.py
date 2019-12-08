@@ -3,6 +3,7 @@ import json
 import time
 import rsa
 import base64
+import requests
 
 client = pymongo.MongoClient(host='localhost', port=27017)
 db = client.test
@@ -14,7 +15,7 @@ collec_BC = db.BlockChain
 #print(pub_key.__class__)
 #print(pub_key)
 
-
+'''
 user = {
     'name': 'ReallyMonkey',
     'passworld':'1111',
@@ -24,6 +25,7 @@ user = {
 
 #collec_User.insert_one(user)
 print(user['name'])
+'''
 '''
 new_usr = collec_User.find_one({'name':'ReallyMonkey'})
 print(new_usr)
@@ -56,4 +58,16 @@ else:
 
 #with open('pub_key.pem','w+') as f:
  #   f.write(pub_key.save_pkcs1().decode())
+'''
+ADDR1 = "http://localhost:8000"
+try:
+    response = requests.get("{}/chain".format(ADDR1))
+except requests.exceptions.ConnectionError:
+    print('fine')
+
+
+'''
+if response.status_code == 200:
+    length = response.json()['length']
+    print(length)
 '''

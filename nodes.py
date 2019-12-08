@@ -4,6 +4,14 @@ import time
 import random
 import pymongo
 import rsa, base64
+import requests
+
+nodes_server_addrs = []
+ADDR1 = "http://localhost:8001"
+ADDR2 = "http://localhost:8002"
+nodes_server_addrs.append(ADDR1)
+nodes_server_addrs.append(ADDR2)
+
 
 class Block:
     def __init__(self,BID,transactions,preblock):
@@ -72,6 +80,9 @@ class BlockChain:
             self.create_origin_block()
             return "Create an original block"
 
+        '''
+        check hash to make sure the chain in database is a valid chain
+        '''
         chain = collection.find()
         for block in chain:
             new_B = Block(block['BID'],block['transac'],block['preblock'])
@@ -83,8 +94,16 @@ class BlockChain:
                 self.chain.append(new_B)
             else:
                 return "Invalid chain"
+        
+        '''
+        check if we have the longest valid chain
+        '''
+        longest_chain = self.nodes_chain_check()
+        if longest_chain:
+            print('long')
+            self.chain = longest_chain
 
-        return "Load an existe chain"
+        return "Load an existed chain"
 
     @classmethod
     def check_block(cls, block):
@@ -162,6 +181,34 @@ class BlockChain:
         }
 
         collection.insert(insert_block)
+    
+    def nodes_chain_check(self):
+        '''
+        To make sure the chain we loaded are the longest chain,
+        which is also the chain includes most block.
+        '''
+        current_length = len(self.chain)
+        new_chain = False
+
+        for addr in nodes_server_addrs:
+            try:
+                response = requests.get('{}/chain'.format(addr))
+            except requests.exceptions.ConnectionError:
+                continue
+            else:
+                if response.status_code == 200:
+                    new_len = response.json()['length']
+                    if new_len > current_length:
+                        current_length = new_len
+                        new_chain = response.json()['chain']
+        
+        if new_chain:
+            return new_chain
+        
+        return False
+            
+
+
 
 '''
 Now we deploy the blockchain framework to a flask server
@@ -204,23 +251,7 @@ def add_new_transaction():
     # Also, we need to have an authentication of author's identity
     if not check_sig(new_transaction):
         return "signature not valid", 404
-    '''
-    user_info = collec_User.find_one({'name':new_transaction['author']})
-    pub_key = user_info['public'].encode()
-    public_key = rsa.PublicKey.load_pkcs1(pub_key)
-    sig_bytes = bytes(new_transaction['signature'], encoding='utf-8')
-    signature = base64.b64decode(sig_bytes)
-    transac_body = {
-        'author': new_transaction['author'],
-        'content': new_transaction['content'],
-        'time': new_transaction['time']
-    }
-    transac_json = json.dumps(transac_body).encode()
-    try:
-        rsa.verify(transac_json, signature, public_key)
-    except rsa.pkcs1.VerificationError:
-        return "Transaction Invalidation", 404
-    '''
+    
     BCChat.add_transaction(new_transaction)
     #print(BCChat.new_transactions)
 
@@ -266,16 +297,3 @@ def check_sig(new_transaction):
 # Run app
 app.run(debug=True, port=8000)
 
-'''
-client = pymongo.MongoClient(host='localhost', port=27017)
-db = client.test
-collection = db.BlockChain
-
-result = collection.find()
-
-print(BCChat.chain[0].hash == BCChat.chain[1].preblock)
-
-for block in BCChat.chain:
-    print(block.__dict__)
-
-'''
